@@ -1,0 +1,16 @@
+02.03.2026 09-16 Uhr
+Theorie finite Elemente erarbeitet, remote Zugriff auf Annes Rechner eingerichtet
+
+03.03.2026 09-16 Uhr
+versucht fenicsx zum laufen zu kriegen. FEM_Poisson läuft, ist aber recht minimalistisch. FEM_Helmholtz (https://docs.fenicsproject.org/dolfinx/v0.10.0.post5/python/demos/demo_helmholtz.html) ist unvollständig. FEM_Tutorial_Book (https://jsdokken.com/dolfinx-tutorial/chapter1/fundamentals_code.html) läuft bis zum plotten, da muss ich weiter arbeiten. Ich will auch schauen, ob ich die Sachen irgendwie mit numpy angeschaut bekomme. 
+
+04.03.2026 09 - 16 Uhr
+Tutorial FEM_Tutorial_Book fertig gemacht, das enthält jetzt noch mehr Infos auch zu den einzelnen Eigenschaften des mesh und so. Außerdem Tutorial FEM_WeakImpositionDirichlet gemacht, das enthält eine Methode wie man die Dirichlet-Randbedingung in das variational problem mitreinschreibt, damit man es nicht in die Testfunktion mitreinmachen muss. 
+Zusätzlich FEM_DeflectionOfAMembrane gemacht, da wird mit der CAD-Software gmsh ein Mesh gemacht und außerdem enthält das Infos darüber wie man die Lösungsfunktion u_h auswerten kann. Dafür habe ich auch noch eine Funktion in visualization_fct.py geschrieben, damit man das nicht jedes Mal neu machen muss.
+Morgen möchte ich mal schauen, ob ich FEM auch auf ein komplexeres Thema angewendet bekomme, am liebsten natürlich schon was mit Grundwasser oder so...
+
+05.03.2026 09 - 15 Uhr
+Tutorial ChannelFlow gemacht, da geht es um die Navier-Stokes Gleichung für incompressible fluids, die ist zudem time-dependent und da wird für die Zeitdiskretisierung ein predictor-corrector Schema genutzt. Zudem ein einfaches transientes Problem in TransientProblem gelöst, das benutzt einfache finite Differenzen für die Zeitkomponente. Aber die Plots klappen da noch nicht, die sollten animiert sein, ich seh gar nichts. Doch, ich Idiot, die werden in nem gif gespeichert haha. Morgen da nochmal schauen und verschiedene boundary conditions testen, auch mal Neumann. 
+
+06.03.2026 08:30 - 12:30 Uhr
+Viel nochmal gelesen und angeschaut über finite Elemente, v.a. https://jsdokken.com/FEniCS23-tutorial/src/introduction.html fand ich sehr hilfreich, da sind endlich mal die Basisfunktionen über ein Referenzelement geplottet. Außerdem hab ich BoundaryConditions gemacht, also angeschaut, wie man Dirichlet und Neumann b.c. an verschiedenen Seiten anbringt und dann habe ich noch Subdomains gemacht, wo ich gelernt habe, wie man unterschiedliche Materialien einbringen kann.
