@@ -15,6 +15,50 @@ def plot_mesh(V):
     else:
         print("pyvista needs to be used in the default setting of pyvista.OFF_SCREEN=False.")
 
+def plot_mesh2(mesh: mesh.Mesh, values=None):
+    """
+    Given a DOLFINx mesh, create a `pyvista.UnstructuredGrid`,
+    and plot it and the mesh nodes.
+
+    Args:
+        mesh: The mesh we want to visualize
+        values: List of values indicating a marker for each cell in the mesh
+
+    Note:
+        If `values` are given as input, they are assumed to be a marker
+        for each cell in the domain.
+    """
+    pv.set_jupyter_backend("html")
+    # We create a pyvista plotter instance
+    plotter = pv.Plotter()
+
+    # Since the meshes might be created with higher order elements,
+    # we start by creating a linearized mesh for nicely inspecting the triangulation.
+    V_linear = fem.functionspace(mesh, ("Lagrange", 1))
+    linear_grid = pv.UnstructuredGrid(*plot.vtk_mesh(V_linear))
+
+    # If the mesh is higher order, we plot the nodes on the exterior boundaries,
+    # as well as the mesh itself (with filled in cell markers)
+    if mesh.geometry.cmap.degree > 1:
+        ugrid = pv.UnstructuredGrid(*plot.vtk_mesh(mesh))
+        if values is not None:
+            ugrid.cell_data["Marker"] = values
+        plotter.add_mesh(ugrid, style="points", color="b", point_size=10)
+        ugrid = ugrid.tessellate()
+        plotter.add_mesh(ugrid, show_edges=False)
+        plotter.add_mesh(linear_grid, style="wireframe", color="black")
+    else:
+        # If the mesh is linear we add in the cell markers
+        if values is not None:
+            linear_grid.cell_data["Marker"] = values
+        plotter.add_mesh(linear_grid, show_edges=True)
+
+    # We plot the coordinate axis and align it with the xy-plane
+    plotter.show_axes()
+    plotter.view_xy()
+    if not pv.OFF_SCREEN:
+        plotter.show()
+
 
 def evaluate_fct(domain, points, fcts):
     """
