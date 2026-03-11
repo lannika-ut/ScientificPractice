@@ -21,3 +21,6 @@ Hab versucht die Richards Gleichung in ein variational problem umzuformulieren, 
 
 10.03.2026 10 - 15 Uhr
 Newton besser verstanden, mitsamt Gateaux Ableitung. Gateaux Ableitung zumindest für die oberste Ebene berechnet. Dann angefangen in Richards.ipynb das Ganze zu implementieren. Ein selbstgemachtes, schiefes Rechteck als domain erstellt, versucht boundary conditions einzuprogrammieren, das erweist sich als sehr kompliziert, aber ich glaube, ich habe es jetzt fast. Muss aber nochmal überprüfen, ob das wirklich das ist, was ich jetzt ganz genau brauche. Momentan noch ein Fehler beim konkreten Implementieren der b.c. das liegt aber daran, dass ich das variational problem noch nicht definiert habe. Das muss ich dann morgen noch machen, mitsamt solver.
+
+11.03.2026 9 - 15 Uhr
+b.c. fertig implementiert, schwache Formulierung implementiert, Picard-Iteration funktioniert jetzt. viel debuggt. Picard-Iteration funktioniert auch für Gardner-Parametrisierung (siehe paper zu analytischen lsg.) to do: saturation plotten, q berechnen und plotten, analytische lsg vergleichen, transient, heterogenität einbauen, newton evtl?
