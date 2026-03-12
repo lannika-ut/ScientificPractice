@@ -4,18 +4,20 @@ import pyvista as pv # type: ignore
 from dolfinx import fem, io, mesh, plot, geometry # type: ignore
 
 
-def plot_mesh(V):
+def plot_mesh(V, title="Mesh for finite element method"):
     pv.set_jupyter_backend("html")
     cells, types, x = plot.vtk_mesh(V) # convert mesh to vtk data which pyvista can read
     grid = pv.UnstructuredGrid(cells, types, x)
     plotter = pv.Plotter()
     plotter.add_mesh(grid, show_edges=True)
+    plotter.show_axes()
+    plotter.add_title(title)    
     if not pv.OFF_SCREEN:
         plotter.show()
     else:
         print("pyvista needs to be used in the default setting of pyvista.OFF_SCREEN=False.")
 
-def plot_mesh2(mesh: mesh.Mesh, values=None):
+def plot_mesh2(mesh: mesh.Mesh, values=None, title="Mesh for finite element method"):
     """
     Given a DOLFINx mesh, create a `pyvista.UnstructuredGrid`,
     and plot it and the mesh nodes.
@@ -28,7 +30,7 @@ def plot_mesh2(mesh: mesh.Mesh, values=None):
         If `values` are given as input, they are assumed to be a marker
         for each cell in the domain.
     """
-    pv.set_jupyter_backend("html")
+    pv.set_jupyter_backend("static")
     # We create a pyvista plotter instance
     plotter = pv.Plotter()
 
@@ -55,6 +57,7 @@ def plot_mesh2(mesh: mesh.Mesh, values=None):
 
     # We plot the coordinate axis and align it with the xy-plane
     plotter.show_axes()
+    plotter.add_title(title)   
     plotter.view_xy()
     if not pv.OFF_SCREEN:
         plotter.show()
@@ -94,7 +97,7 @@ def evaluate_fct(domain, points, fcts):
     return points_on_proc, fcts_values
         
 
-def plotScalarFunction(V, u, warped=False, name = "u"):
+def plotScalarFunction(V, u, warped=False, name = "u", title="", fct_as_array=False, cmap = "viridis"):
     """
     Plot a dolfinx.function on its grid.
 
@@ -102,19 +105,28 @@ def plotScalarFunction(V, u, warped=False, name = "u"):
         V (dolfinx.fem.function.FunctionSpace): Functionspace of the function, containing the grid.
         u (dolfinx.fem.function.Function): Scalar function that should be plotted.
         warped (bool, optional): If the plot should be warped to see changes in function values in 3D or not. Defaults to False.
-        name (String): Name of the function to add to colour bar.
+        name (String, optional): Name of the function to add to colour bar.
+        title (String, optional): Title of the plot.
+        fct_as_array (bool, optional): If the function to be plotted is already in form of a numpy array. Defaults to False.
+        cmap (String, optional): Colour map to use. Defaults to viridis.
     """
-    pv.set_jupyter_backend("html")
+    pv.set_jupyter_backend("static")
     grid = pv.UnstructuredGrid(*plot.vtk_mesh(V))
-    grid.point_data[name] = u.x.array.real
+    if fct_as_array:
+        grid.point_data[name] = u
+    else:
+        grid.point_data[name] = u.x.array.real
     grid.set_active_scalars(name)
     plotter = pv.Plotter()
     if warped:
         warp = grid.warp_by_scalar()
-        plotter.add_mesh(warp, show_edges = True, show_scalar_bar = True)
+        plotter.add_mesh(warp, show_edges = True, show_scalar_bar = True, cmap = cmap)
     else:
-        plotter.add_mesh(grid, show_edges = True)
+        plotter.add_mesh(grid, show_edges = True, cmap = cmap)
     plotter.view_xy()
+    plotter.add_axes()
+    plotter.show_axes()
+    a = plotter.add_title(title)
     if not pv.OFF_SCREEN:
         plotter.show()
     else:

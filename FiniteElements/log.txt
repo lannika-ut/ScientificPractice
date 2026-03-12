@@ -24,3 +24,6 @@ Newton besser verstanden, mitsamt Gateaux Ableitung. Gateaux Ableitung zumindest
 
 11.03.2026 9 - 15 Uhr
 b.c. fertig implementiert, schwache Formulierung implementiert, Picard-Iteration funktioniert jetzt. viel debuggt. Picard-Iteration funktioniert auch für Gardner-Parametrisierung (siehe paper zu analytischen lsg.) to do: saturation plotten, q berechnen und plotten, analytische lsg vergleichen, transient, heterogenität einbauen, newton evtl?
+
+12.03.2026 9 - 16 Uhr
+Sättigung und Durchfluss geplottet, lange mit plot-Parametern verbracht, den Text von Richards.ipynb in ein latex-Dokument übertragen, angefangen mit analytischer Lösung zu beschäftigen
