@@ -27,3 +27,7 @@ b.c. fertig implementiert, schwache Formulierung implementiert, Picard-Iteration
 
 12.03.2026 9 - 16 Uhr
 Sättigung und Durchfluss geplottet, lange mit plot-Parametern verbracht, den Text von Richards.ipynb in ein latex-Dokument übertragen, angefangen mit analytischer Lösung zu beschäftigen
+
+13.03.2026 9 - 15
+analytische Lösung implementiert und dann verglichen mit diskreter Lösungsmethode funktioniert mega gut :O
+to do: Massenbilanz???

@@ -73,7 +73,7 @@ def evaluate_fct(domain, points, fcts):
         fcts (list of dolfinx.fem.function.Function): Functions that need to be evaluated. The functions should be a linear combination of the basis functions on the domain, either created by interpolating an expression on a functionspace or by a finite element algorithm.
 
     Returns:
-        list: points_on_proc (np.ndarray), fcts_values (list of np.ndarray): points where the functions are evaluated that are on the current processor and list of evaluated points for each function in fcts.
+        list: points_on_proc (np.ndarray), fcts_valuess (list of np.ndarray): points where the functions are evaluated that are on the current processor and list of evaluated points for each function in fcts.
     """
     bb_tree = geometry.bb_tree(domain, domain.topology.dim)
     cells = []
