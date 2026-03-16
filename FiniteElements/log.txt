@@ -28,6 +28,11 @@ b.c. fertig implementiert, schwache Formulierung implementiert, Picard-Iteration
 12.03.2026 9 - 16 Uhr
 Sättigung und Durchfluss geplottet, lange mit plot-Parametern verbracht, den Text von Richards.ipynb in ein latex-Dokument übertragen, angefangen mit analytischer Lösung zu beschäftigen
 
-13.03.2026 9 - 15
+13.03.2026 9 - 16 Uhr
 analytische Lösung implementiert und dann verglichen mit diskreter Lösungsmethode funktioniert mega gut :O
-to do: Massenbilanz???
+to do: Massenbilanz, Fehler zwischen den Lösungen berechnen, transient
+
+16.03.2026 9 - 15:30 Uhr
+Vergleich analytische und diskrete Lösungsmethode, unterschiedliche finite Elemente getestet, unterschiedlich enge/weite Netze, unterschiedliche Parameter. Versucht, van Genuchten und Gardner zu vergleichen mit dem Ansatz, das hat aber gar nicht funktioniert, weil van Genuchten irgendwie da noch nichtmal konvergiert in der Picard-Iteration, weiß auch noch nicht, ob das an einem Fehler im Code oder an der Parametrisierung liegt... Allerdings habe ich auch festgestellt, dass der diskrete Ansatz für alpha=0.3 schon gar nicht mehr sinnvoll konvergiert, also keine Ahnung wie sinnvoll das jetzt ist damit weiterzumachen, vor allem weil ich zum Beispiel für loam ein noch höheres alpha herausbekomme (zumindest wenn man die Gardner soil retention curve and die van Genuchten fittet)... Also keine Ahnung wie sinnvoll das alles überhaupt ist... Scheint schon sehr instabil zu sein diese Gleichung. 
+In Richards_analytical1 hab ich versucht das so anzupassen, dass man da wieder mit h_c statt h=-h_c arbeiten kann, damit man direkt mit van Genuchten vergleichen kann, bin mir aber nicht sicher, ob ich das richtig gemacht habe, weil das auch nicht konvergiert...
+to do: Massenbilanz?, transient!
