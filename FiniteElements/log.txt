@@ -40,3 +40,7 @@ to do: Massenbilanz?, transient!
 17.03.2026 08:30 - 15:30 Uhr
 Versucht transient zu werden, hat aber mal so gar nicht geklappt. Zuerst lange versucht mit Picard, da ist aber das Problem dass man bei der Zeitkomponente wenn man den vorherigen Schritt als Anfangswert für die Picard-Iteration nimmt, dann fliegt die Zeitkomponente raus, also hat man im Prinzip wieder das steady-state Problem, aber mit einem kleinen dt Faktor davor. Das ist schlecht. Alternativ kann man die Zeitkomponente durch dt teilen, dann braucht es ein bisschen länger bis Picard explodiert, tut es aber trotzdem juhu. Also nicht sehr erfolgreich. Newton hab ich bis jetzt auch nicht sinnvoll zum Laufen gebracht. 
 to do: Heterogenität, transient? (das nur wenn ich den Nerv dazu hab, sonst heterogen im steady-state.)
+
+18.03.2026 08:30 - 12:00 Uhr
+Newton nochmal versucht zu implementieren, einmal "von Hand" das macht was, konvergiert aber gar nicht (Fehler wächst exponentiell), dann mit dem nonlinearProblem von dolfinx, das macht jetzt auch was, konvergiert aber auch nicht :( und das konvergiert schon nicht für einen Zeitschritt, also leider schade...
+Dann versucht einen heterogenen Boden zu modellieren, das hat glaub ganz gut geklappt, aber da konvergiert die Picard-Iteration nicht in 75 Schritten und der Fehler zwischen den Runden bleibt einfach gleich groß, aber ich weiß noch nicht warum. Aber das Ergebnis sieht zumindest einigermaßen stimmig aus von der Form her (also unten toniger Boden, der hält mehr Wasser, oben sandiger mit weniger Wasser). 
