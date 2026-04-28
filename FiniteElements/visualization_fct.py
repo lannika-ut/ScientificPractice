@@ -131,3 +131,20 @@ def plotScalarFunction(V, u, warped=False, name = "u", title="", fct_as_array=Fa
         plotter.show()
     else:
         print("pyvista needs to be used in the default setting of pyvista.OFF_SCREEN=False.")
+
+def eval_fct_on_grid(grid, u, domain):
+    """
+    Evaluate a dolfinx.function u on a grid.
+
+    Args:
+        grid (np.ndarray, shape (x,2)): grid containing values in x-direction in grid[:,0] and values in z-direction in grid[:,1]
+        u (list of dolfinx.fem.function.Function): scalar function
+        domain (dolfinx.mesh.Mesh): mesh containing the topology
+    Returns:
+        np.array (length of grid[:,0]): function values of u on the grid.
+    """
+    h = np.zeros(grid.shape)
+    p = np.vstack([grid[:,0], grid[:,1], np.zeros(len(grid[:,0]))])
+    pts, values = evaluate_fct(domain, p, u)
+    h = np.array(values).flatten()
+    return h

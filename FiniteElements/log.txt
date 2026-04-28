@@ -56,3 +56,53 @@ Artikel von Celia et al 1990 gelesen, versucht das umzusetzen in Richards_transi
 
 01.04.2026 08 - 11 Uhr
 Transiente Richards Gleichung analysiert, das braucht einfach sehr lange, bis das Wasser infiltriert, aber es infiltriert den Boden und ich habe zwar den steady-state noch nicht erreicht, aber es funktioniert glaub. Es funktioniert jetzt auch mit dem Newton Verfahren. Morgen muss ich dann mal erste Ergebnisse zusammenfassen, damit ich am Dienstag auch was Sinnvolles vorzuweisen habe.
+
+02.04.2026 09:00 - 16:20 Uhr
+Better bibtex installiert, damit ich einfacheres Bibliographiemanagement habe. Angefangen den previous work Teil zu schreiben, Literaturrecherche für introduction gemacht. Einmal 5 Tage Simulation durchlaufen lassen, immer noch kein steady-state erreicht, aber näher dran.
+
+07.04.2026 08:45 - 16:25 Uhr
+Besprechung mit Cirpka und Anne: jetzt Fokus auf Theorieteil für Report. Abgabe weiterhin wie geplant, aber Anmeldung Masterarbeit bisschen später für Puffer für HIT.
+Angefangen Theorieteil durchzugehen. Es gibt eine Masterarbeit die auch das Paper hernimmt. Ich hab jetzt mal angefangen die conservation of ice mass zu verstehen und ein mini bisschen schon aufgeschrieben. Sonst ist nicht viel passiert. Ist aber auch ganz schön kompliziert das Ganze.
+
+08.04.2026 09:15 - 15:45 Uhr
+Geschrieben. conservation of ice mass ist fertig, conservation of water mass fast, da fehlt jetzt noch die Herleitung der Richards' Gleichung und wie bzw wo man sie benutzt. 
+
+09.04.2026 08:50 - 12:00 Uhr
+water mass conservation mit Herleitung zur Richards Gleichung aufgeschrieben.
+
+10.04.2026 09:00 - 14:00 Uhr
+thermal energy balance aufgeschrieben. Am Montag weiter mit interface temperature und herleitung der alpha parameter. Finden wo sich die porosity beim refreezing ändert. 
+
+13.04.2026 08:45 - 15:00 Uhr
+Besprechung mit Anne: Introduction gut motiviert, Zeitplan darf grob bleiben, Methoden müssen auch nicht super lang, nächstes Treffen Montag um 9
+Weitergeschrieben mit T_int. Herleitung der alpha Parameter fehlt noch, nicht zu direkt zitieren ganz schön schwierig. Sonst noch Parametrisierung wieder zu van Genuchten ändern.
+
+14.04.2026 09:20 - 17:00 Uhr
+Fertigstellung Theorieteil, Literaturrecherche für Einleitung
+
+15.04.2026 13:00 - 16:00 Uhr
+Methodenteil und Zeitplan
+
+16.04.2026 09 - 14 Uhr
+Einleitung
+
+17.04.2026 09 - 14 Uhr
+Einleitung
+
+20.04.2026 09 - 12 Uhr
+Schneehydrologie Kurs: https://mountain-hydrology-research-group.github.io/snow-hydrology/intro.html
+
+21.04.2026 - 22.04.2026
+nichts
+
+23.04.2026 09:15 - xx:xx Uhr
+upstream weighting von k_r (beschrieben in HGS Theory Kapitel 3.2, 3.4.1) angelesen. Das basiert aber darauf, dass man die Knoten direkt ansprechen kann und das kann ich nicht. chat sagt, dass das auch nicht natürlich ist bei continuous galerkin sondern eher für discontinuous galerkin passt, wo man den Fluss durch die Facetten spezifiziert. Das scheint mir dann aber recht ähnlich zu finite Volumen, wo man ja dann auch keine stetige Lösung hat, was man ja aber eigentlich haben will... hab mich dann noch mit Stabilisierungstechniken beschäftigt, aber bis jetzt noch nichts super überzeugendes gefunden. Es gibt ein SUPG (streamline upwind petrov-galerkin) Schema das für die Navier Stokes und ADE entwickelt wurde, aber ich hab ja gar keine advection diffusion Gleichung. Dann hab ich nicht mehr so viel gemacht. Morgen will ich das Video was ich gerade gefunden habe anschauen und das nächste Kapitel in Moure et al nachvollziehen zu der numerischen Implementierung bzw Vereinfachungen.
+
+24.04.2026 
+wet snow video angeschaut
+
+27.04.2026 09:00 - 15:30 Uhr
+Besprechung mit Anne zu Einleitung, Bemerkungen eingearbeitet. Als nächstes transiente Richards, van genuchten, heterogen und inflow -> konvergenzprobleme?
+
+28.04.2026 09:10 - 15:30 Uhr
+Einleitung verbessert, Funktion geschrieben eval_fct_on_grid (damit kann man jetzt auch für nicht rechteckige Bereiche die Funktion auswerten und dann plotten), Richards heterogen im steady state aber mit van genuchten getestet. Tatsächlich konvergiert das im Newton Verfahren bei mir recht fix, aber ich hab keine Ahnung wie realistisch das ist. Es sieht jetzt nicht super unrealistisch aus, aber na ja. Lehm über Sand funktioniert nicht, da divergiert es, aber ich glaube, das ist weil ich ja über die Randbedingungen fordere, dass sich unten ein Aquifer bildet und das ist nicht sehr realistisch wenn ich Lehm über Sand habe, da würde sich ja eigentlich das ganze Wasser im Lehm ansammeln. Sand über Lehm funktioniert dafür gut und sieht auch ganz gut aus, die obere Hälfte ist trocken, die untere nässer. Dann habe ich noch versucht, das zu vermeiden dass die Lösung negativ wird, das hab ich aber nicht hinbekommen. Das ist mit Newton nicht so mega trivial wie mit Picard. Nennt sich dann eine variational inequality. Aber dafür hab ich einfach bei der Parametrisierung dafür gesorgt, dass es keine Probleme mit negativen Zahlen hat.
