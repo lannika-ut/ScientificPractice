@@ -109,4 +109,12 @@ Einleitung verbessert, Funktion geschrieben eval_fct_on_grid (damit kann man jet
 Falls mir langweilig wird hab ich mir überlegt, dass ich das noch flexibler machen will, wie viele Schichten man haben will, also dass man das einfacher umbauen kann durch z.B. eine Funktion.
 
 29.04.2026 12:00 - 15:45 Uhr
-Versucht, das mit den Schichten umzubauen damit es skalierbar auf verschieden viele Schichten passt. Bis jetzt habe ich erfolgreich den Zellen ihre Schichtnumber zugewiesen. Dann habe ich versucht das ganze über ein custom integration measure zu lösen, also dass quasi die Zellen die in Schicht x liegen mit den Parametern der Schicht x integriert werden. Jetzt funktioniert aber das Newton Verfahren nicht mehr, weil die Jacobi-Matrix explodiert. Irgendwas scheint also noch absolut nicht zu passen. Das muss ich morgen dann mal weiterschauen. Heute lass ich es dabei.
+Versucht, das mit den Schichten umzubauen damit es skalierbar auf verschieden viele Schichten passt. Bis jetzt habe ich erfolgreich den Zellen ihre Schichtnumber zugewiesen. Dann habe ich versucht das ganze über ein custom integration measure zu lösen, also dass quasi die Zellen die in Schicht x liegen mit den Parametern der Schicht x integriert werden. Jetzt funktioniert aber das Newton Verfahren nicht mehr, weil die Jacobi-Matrix explodiert. Irgendwas scheint also noch absolut nicht zu passen. Das muss ich morgen dann mal weiterschauen. Heute lass ich es dabei. 
+Hilfreiche Webseiten: https://jsdokken.com/FEniCS-workshop/src/deep_dive/restriction.html
+https://jsdokken.com/dolfinx-tutorial/chapter3/subdomains.html
+https://fenicsproject.discourse.group/t/anisotropic-heterogeneous-diffusion/10826
+https://github.com/jorgensd/dolfinx_mpc/blob/main/python/demos/demo_stokes.py
+
+30.04.2026 09:30 - 16:00 Uhr
+Bericht überarbeitet und Cirpka geschickt. Debugging beim flexibleren heterogenen Code, Problem ist, dass die Zellen, die halt auf der Mittellinie liegen nicht zugeordnet werden. Das muss irgenwie umgangen werden. Das hab ich jetzt gelöst juhu. Aber ich weiß nicht, ob mein Ergebnis Sinn macht, weil es anders ist als das von dem nicht so flexiblen Code...
+Als nächstes würde ich gerne noch rausfinden, wie man die Sättigung plottet. Außerdem will ich das ganze noch transient machen.
