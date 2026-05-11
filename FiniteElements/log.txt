@@ -118,3 +118,24 @@ https://github.com/jorgensd/dolfinx_mpc/blob/main/python/demos/demo_stokes.py
 30.04.2026 09:30 - 16:00 Uhr
 Bericht überarbeitet und Cirpka geschickt. Debugging beim flexibleren heterogenen Code, Problem ist, dass die Zellen, die halt auf der Mittellinie liegen nicht zugeordnet werden. Das muss irgenwie umgangen werden. Das hab ich jetzt gelöst juhu. Aber ich weiß nicht, ob mein Ergebnis Sinn macht, weil es anders ist als das von dem nicht so flexiblen Code...
 Als nächstes würde ich gerne noch rausfinden, wie man die Sättigung plottet. Außerdem will ich das ganze noch transient machen.
+
+04.05.2026 10:00 - 15:30 Uhr
+Cirpkas Anmerkungen eingearbeitet, sehr viel mit Wäremeerhaltung beschäftigt, warum die unterschiedliche Dichten für gefrieren und schmelzen nehmen, aber nichts sinnvolles bei rumgekommen.
+
+05.05.2026 08:40 - 14:45 Uhr
+Besprechung mit Anne: Ich schreibe Adrian Moure eine Mail zu der Wäremeerhaltung, Anne spricht mit Thomas Heinze auf der EGU. Gleiche Vorzeichen vielleicht, weil wenn Wärme frei wird, die dann gleichmüßig auf Eis und Wasserphase verteilt wird? Zum Code: ich soll mal schauen, ob ich den Wassergehalt geplottet bekomme, bzw auch nur für eine Stelle im Sand. Anne vermutet, dass der Sand eigentlich nur noch residual water content haben sollte, also vermutlich ist der unflexible Code richtiger... Sonst meinte sie, müsste Lehm über Sand im transienten Fall eigentlich klappen. Außerdem soll ich schauen, wo der Bug ist in den zwei heterogenen Codes, evtl schauen, wie das conditional funktioniert. 
+Ich hab dann noch angefangen, die anderen Anmerkungen vom Cirpka einzuarbeiten, jetzt fehlt nur noch das mit der variablen Dichte und ich soll noch die Primärvariable statt der Sättigung zum hydraulischen Druck machen.
+
+06.05.2026 13:20 - 16:15 Uhr
+Antwort von Adrian eingebaut
+
+07.05.2026 10:00 - 16:20 Uhr
+Pressure head zur Primärvariable gemacht.
+
+08.05.2026 eigentlich nicht lang
+geschaut, was der Unterschied zwischen heterogen und heterogen_flexibel ist. Heterogen nähert sich auf jeden Fall stärker dem residual water content von Sand an. 
+Ich glaube der Unterschied liegt eventuell daran, dass bei heterogen die Grenze innerhalb der Zellen verläuft (muss man auch mal schauen, ob man das überhaupt haben will, weil ja eigentlich die Zielfunktion stetig innerhalb der Zellen sein soll und dann da so ne fette Unstetigkeit in die Zelle zu packen klingt gefährlich). Bei heterogen flexibel gibt es keine Materialunterschiede innerhalb der Zelle. Ich muss mal schauen, ob man rausfinden kann, ob das wirklich so ist, oder nicht. (Siehe auch chatgpt für neue Möglichkeiten)
+
+11.05.2026 13:30 - 15 Uhr
+Debugging. heterogen_flexibel funktioniert nicht für cellType quadrilateral. Dafür funktioniert die Formulierung über ein zusätzliches DG0 Feld, ergibt aber das gleiche Ergebnis wie der in heterogen_flexibel (jede Zelle hat genau einen festen Wert, keine zwei Werte in einer Zelle) 
+Hab außerdem rausgefunden, dass tatsächlich in Richards_heterogen 8 Zellen vom interface geschnitten werden. Komischerweise ist das ja dann so semi gut vereinbar mit fem, aber anscheinend funktioniert es ja trotzdem besser als der andere approach. Vielleicht sollte ich morgen nochmal den anderen approach ordentlich from scratch testen.
