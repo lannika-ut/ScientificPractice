@@ -1,5 +1,5 @@
 import numpy as np
-from dolfinx import mesh # type: ignore
+from dolfinx import mesh, fem # type: ignore
 
 def create_quad_domain(comm, nx, ny, p0, p1, p2, p3, celltype=mesh.CellType.triangle):
     """
@@ -31,3 +31,10 @@ def create_quad_domain(comm, nx, ny, p0, p1, p2, p3, celltype=mesh.CellType.tria
         np.outer((1-xi)*eta, p3)
     )
     return msh
+
+def print_matrix_from_equation(Eq):
+    X = fem.petsc.assemble_matrix(fem.form(Eq))
+    X.assemble()
+    X.convert("dense")
+    C = X.getDenseArray()
+    print(f"Matrix form: {C}")
