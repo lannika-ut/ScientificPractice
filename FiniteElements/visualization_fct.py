@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
 import pyvista as pv # type: ignore
 from dolfinx import fem, io, mesh, plot, geometry # type: ignore
 
@@ -63,14 +65,14 @@ def plot_mesh2(mesh: mesh.Mesh, values=None, title="Mesh for finite element meth
         plotter.show()
 
 
-def evaluate_fct(domain, points, fcts):
+def evaluate_fct(domain, points, fct):
     """
     This is a wrapper function to evaluate multiple dolfinx.fem.function.Function at given points. Explanations to what is going on can either be found in the script FEM_DeflectionOfAMembrane.ipynb or online: https://jsdokken.com/dolfinx-tutorial/chapter1/membrane_code.html.
 
     Args:
         domain (dolfinx.mesh.Mesh): Mesh containing the topology (i.e. the cells).
         points (np.ndarray): Points at which the functions should be evaluated. Shape should be (3, num_points) with x-coordinates in the first, y-coordinates in the second and z-coordinates in the third dimension.
-        fcts (list of dolfinx.fem.function.Function): Functions that need to be evaluated. The functions should be a linear combination of the basis functions on the domain, either created by interpolating an expression on a functionspace or by a finite element algorithm.
+        fct (dolfinx.fem.function.Function): Function that needs to be evaluated. The function should be a linear combination of the basis functions on the domain, either created by interpolating an expression on a functionspace or by a finite element algorithm.
 
     Returns:
         list: points_on_proc (np.ndarray), fcts_values (list of np.ndarray): points where the functions are evaluated that are on the current processor and list of evaluated points for each function in fcts.
@@ -92,8 +94,7 @@ def evaluate_fct(domain, points, fcts):
     points_on_proc = np.array(points_on_proc, dtype=np.float64)
     # Evaluate functions
     fcts_values = []
-    for f in fcts:
-        fcts_values.append(f.eval(points_on_proc, cells))
+    fcts_values.append(fct.eval(points_on_proc, cells))
     return points_on_proc, fcts_values
         
 
@@ -138,7 +139,7 @@ def eval_fct_on_grid(grid, u, domain):
 
     Args:
         grid (np.ndarray, shape (x,2)): grid containing values in x-direction in grid[:,0] and values in z-direction in grid[:,1]
-        u (list of dolfinx.fem.function.Function): scalar function
+        u (dolfinx.fem.function.Function): scalar function
         domain (dolfinx.mesh.Mesh): mesh containing the topology
     Returns:
         np.array (length of grid[:,0]): function values of u on the grid.
@@ -148,3 +149,34 @@ def eval_fct_on_grid(grid, u, domain):
     pts, values = evaluate_fct(domain, p, u)
     h = np.array(values).flatten()
     return h
+
+def get_grid(P0, P1, P2, P3, n=20):
+    """
+    Generate a grid of points made up of four corner points.
+
+    Args:
+        P0 (np.array): x and y coordinates of the bottom-left corner point
+        P1 (np.array): x and y coordinates of the bottom-right corner point
+        P2 (np.array): x and y coordinates of the top-right corner point
+        P3 (np.array): x and y coordinates of the top-left corner point
+        n (int, optional): number of points in x- and z-direction. Defaults to 20.
+
+    Returns:
+        np.ndarray: list of 2D points of the grid, size (n*n, 2)
+        np.ndarray: grid of x-coordinates, size (n, n)
+        np.ndarray: grid of z-coordinates, size (n, n)
+    """
+    x_int = np.linspace(0, 1, n)
+    z_int = np.linspace(0, 1, n)
+    x_int, z_int = np.meshgrid(x_int, z_int)
+
+    # Bilinear interpolation
+    x_grid = (1 - x_int) * (1 - z_int) * P0[0] + x_int * (1 - z_int) * P1[0] + x_int * z_int * P2[0] + (1 - x_int) * z_int * P3[0]
+    z_grid = (1 - x_int) * (1 - z_int) * P0[1] + x_int * (1 - z_int) * P1[1] + x_int * z_int * P2[1] + (1 - x_int) * z_int * P3[1]
+
+    # Combine into a grid of points
+    grid = np.column_stack((x_grid.ravel(), z_grid.ravel()))
+    x_grid = x_grid.reshape((n,n))
+    z_grid = z_grid.reshape((n,n))
+
+    return grid, x_grid, z_grid
