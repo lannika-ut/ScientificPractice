@@ -75,7 +75,7 @@ def evaluate_fct(domain, points, fct):
         fct (dolfinx.fem.function.Function): Function that needs to be evaluated. The function should be a linear combination of the basis functions on the domain, either created by interpolating an expression on a functionspace or by a finite element algorithm.
 
     Returns:
-        list: points_on_proc (np.ndarray), fcts_values (list of np.ndarray): points where the functions are evaluated that are on the current processor and list of evaluated points for each function in fcts.
+        fcts_values (np.ndarray): evaluated points and nan for points outside the mesh or the process.
     """
     bb_tree = geometry.bb_tree(domain, domain.topology.dim)
     cells = []
@@ -86,16 +86,26 @@ def evaluate_fct(domain, points, fct):
     colliding_cells = geometry.compute_colliding_cells(domain, 
                                                        cell_candidates, 
                                                        points.T)
+    
+    points_not_on_proc = []
+    fct_values = []
     for i, point in enumerate(points.T):
-        if len(colliding_cells.links(i)) > 0:
+        if len(colliding_cells.links(i)) > 0 and len(points_not_on_proc) == 0:
             points_on_proc.append(point)
             cells.append(colliding_cells.links(i)[0])
-    
-    points_on_proc = np.array(points_on_proc, dtype=np.float64)
-    # Evaluate functions
-    fcts_values = []
-    fcts_values.append(fct.eval(points_on_proc, cells))
-    return points_on_proc, fcts_values
+        if len(colliding_cells.links(i)) > 0 and len(points_not_on_proc) > 0:
+            points_on_proc.append(point)
+            cell_link = colliding_cells.links(i)[0]
+            cells.append(cell_link)
+            fct_values.append(fct.eval(point, cell_link))
+        else:
+            # First time a point is not on the processor: evaluate all valid points
+            if len(points_on_proc) == 0:
+                fct_values.append(fct.eval(np.array(points_on_proc, dtype=np.float64), cells))
+            points_not_on_proc.append(point)
+            fct_values.append(np.nan)
+    fct_values = np.hstack(fct_values)
+    return fct_values
         
 
 def plotScalarFunction(V, u, warped=False, name = "u", title="", fct_as_array=False, cmap = "viridis"):
@@ -144,9 +154,8 @@ def eval_fct_on_grid(grid, u, domain):
     Returns:
         np.array (length of grid[:,0]): function values of u on the grid.
     """
-    h = np.zeros(grid.shape)
     p = np.vstack([grid[:,0], grid[:,1], np.zeros(len(grid[:,0]))])
-    pts, values = evaluate_fct(domain, p, u)
+    values = evaluate_fct(domain, p, u)
     h = np.array(values).flatten()
     return h
 
