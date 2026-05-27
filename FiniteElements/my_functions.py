@@ -38,4 +38,3 @@ def print_matrix_from_equation(Eq):
     X.convert("dense")
     C = X.getDenseArray()
     print(f"Matrix form: {C}")
-
