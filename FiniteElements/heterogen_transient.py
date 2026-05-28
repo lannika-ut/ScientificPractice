@@ -1,12 +1,186 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpi4py import MPI
 from dolfinx import mesh, fem, default_scalar_type
 from dolfinx.fem.petsc import NonlinearProblem
-from mpi4py import MPI
 import ufl
 from petsc4py import PETSc
 from my_functions import *
 from visualization_fct import *
+from nonlinear_snes_problem import NonlinearPDE_SNESProblem
+import pickle
+import time
+
+# Boundary conditions
+def boundary_conditions(V, domain, v, P0, P1, P2, P3):
+    slope = (P1[1]-P0[1])/(P1[0]-P0[0])
+    # Boundary condition locators
+    def on_dirichlet(x):
+        return np.logical_and(np.isclose(x[0], P1[0]), x[1] <= 0)
+
+    def top(x):
+        return np.isclose(x[1], slope*x[0]+P3[1])
+
+    # Dirichlet boundary
+    def dirichlet(x):
+        return -x[1]
+    dofs_D = fem.locate_dofs_geometrical(V, on_dirichlet)
+    u_D = fem.Function(V)
+    u_D.interpolate(dirichlet)
+    bc = fem.dirichletbc(u_D, dofs_D)
+
+    # Inflow (Neumann) boundary
+    tdim = domain.topology.dim
+    fdim = tdim - 1
+    domain.topology.create_connectivity(fdim, tdim)
+    boundary_facets = mesh.exterior_facet_indices(domain.topology) 
+    facets_on_top = mesh.locate_entities(domain, fdim, top)
+    facets_not_top = np.setdiff1d(boundary_facets, facets_on_top)
+    # Mark facets belonging to inflow boundary with 1
+    facet_markers = np.zeros_like(boundary_facets)
+    facet_markers[:len(facets_on_top)] = 1
+    facet_indices = np.hstack([facets_on_top, facets_not_top])
+    sorted_facets = np.argsort(facet_indices)
+    # Create meshtags for facets (marker = 1 for inflow boundary)
+    facet_tags = mesh.meshtags(domain, fdim, facet_indices[sorted_facets], facet_markers[sorted_facets]) 
+    # Create custom integration measure for inflow boundary
+    ds = ufl.Measure("ds", domain, subdomain_data=facet_tags)
+    # Recharge
+    c_in = fem.Constant(domain, PETSc.ScalarType(2e-9))
+    inflow = - v * c_in * ds(1)
+
+    return bc, inflow
+
+def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save_tmp=False):
+    from dolfinx.fem.petsc import create_matrix, create_vector
+
+    # Create FE framework
+    domain = create_quad_domain(MPI.COMM_WORLD, nx, nz, P0, P1, P2, P3, celltype=mesh.CellType.quadrilateral)
+    Q = fem.functionspace(domain, ("DG", 0)) # material parameters
+    V = fem.functionspace(domain, ("CG", 1)) # pressure head
+    v = ufl.TestFunction(V)
+    x = ufl.SpatialCoordinate(domain)
+
+    # Define delta_t as fem.Constant
+    delta_t = fem.Constant(domain, PETSc.ScalarType(delta_t))
+
+    # Assign material properties
+    param_fct = assign_material(domain, Q, layer_params)
+    Ks = param_fct["Ks"]
+    alpha = param_fct["alpha"]
+    N = param_fct["N"]
+    theta_r = param_fct["theta_r"]
+    theta_s = param_fct["theta_s"]
+
+    # Get boundary conditions
+    bc, inflow = boundary_conditions(V, domain, v, P0, P1, P2, P3)
+
+    t = 0.0 # start time [s]
+    
+    # Create Newton solver
+    snes = PETSc.SNES().create()
+
+    # Variational formulation
+    h_w_old = fem.Function(V)
+    h_w_old.name = "h_w_old"
+    h_w_old.x.array[:] = -1e-2*np.ones_like(h_w_old.x.array) # initial condition close to saturation
+
+    h_w_new = fem.Function(V)
+
+    z = x[1]
+
+    # Weak formulation
+    F = (theta(S_e(h_w_new, alpha, N), theta_r, theta_s) - theta(S_e(h_w_old, alpha, N), theta_r, theta_s)) / delta_t * v * ufl.dx
+    F += ufl.dot(ufl.grad(v), Ks * k_rel(S_e(h_w_new, alpha, N), N) * ufl.grad(z + h_w_new)) * ufl.dx
+    F += inflow
+
+    # Create nonlinear problem
+    problem = NonlinearPDE_SNESProblem(F, h_w_new, bc)
+    b = create_vector(V)
+    J = create_matrix(problem.a)
+
+    # Create structure for saving temporary files
+    if save_tmp:
+        tmp = {
+            "nx": nx,
+            "nz": nz,
+            "T_end": T,
+            "h_w": [],
+            "times": []
+            }
+        next_saving_time = 1
+        tmp["h_w"].append(h_w_old.x.array)
+        tmp["times"].append(t)
+
+    # Time loop
+    while t <= T:
+
+        # Initial guess for Newton
+        h_w_new.x.array[:] = h_w_old.x.array
+        
+        snes.setFunction(problem.F, b) # assemble residual
+        snes.setJacobian(problem.J, J) # assemble Jacobian
+
+        # Set options
+        snes.setType("newtonls")
+        snes.getLineSearch().setType(PETSc.SNESLineSearch.Type.BT)
+        snes.setTolerances(rtol=1e-4, atol=1e-11, max_it=20)
+        ksp = snes.getKSP()
+        ksp.setType("gmres") # iterative solver
+        ksp.setTolerances(rtol=1e-4)
+        ksp.setErrorIfNotConverged(True)
+        ksp.getPC().setType(PETSc.PC.Type.HYPRE)
+        ksp.getPC().setHYPREType("boomeramg")
+    
+        sol_vec = h_w_new.x.petsc_vec.copy() # create solution vector
+        sol_vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        snes.solve(None, sol_vec) # solve, store solution in solution vector
+
+        sol_vec.copy(h_w_new.x.petsc_vec) # copy solution into h_w_new
+        h_w_new.x.scatter_forward()
+        
+        converged = snes.getConvergedReason()
+        num_iter = snes.getIterationNumber()
+        
+        # adaptive time stepping:
+        if num_iter > 10 and float(delta_t.value) > 1e-1:
+            delta_t.value *= 0.5
+            continue
+        if num_iter < 3 and float(delta_t.value) < 3600:
+            delta_t.value *= 1.2
+        assert converged > 0, f"Solver did not converge, got {converged}."
+        print(
+            f"Solver converged after {num_iter} iterations with converged reason {converged}. Time step is {delta_t.value:.2f} s at t={t/3600:.2f} hours."
+        )
+
+        # save temporary data
+        current_hour = int(t/3600)
+        if save_tmp and current_hour >= next_saving_time:
+            next_saving_time = current_hour + 1
+            tmp["h_w"].append(h_w_new.x.array.copy())
+            tmp["times"].append(t)
+
+        # update time
+        t += float(delta_t.value)
+        # update old solution
+        h_w_old.x.array[:] = h_w_new.x.array
+    
+    # save final data
+    if save_tmp:
+        tmp["h_w"].append(h_w_new.x.array.copy())
+        tmp["times"].append(t)
+    # dump temporary data into pickle file
+    if save_tmp:
+        file_name = "./solutions/heterogeneous_" + str(int(T/3600)) + "h_nx" + str(nx) + "_nz" + str(nz) + ".pkl"
+        with open(file_name, "wb") as f:
+            pickle.dump(tmp, f)
+    snes.destroy()
+    b.destroy()
+    J.destroy()
+
+    return h_w_new
+    
+
 
 # Define geometry
 P0 = np.array([0, 0])
@@ -14,32 +188,12 @@ P1 = np.array([6, -1])
 P2 = np.array([6, 2])
 P3 = np.array([0, 3])
 slope = (P1[1]-P0[1])/(P1[0]-P0[0])
-
-nx = nz = 20 
-
-# Generate mesh from corner points
-domain = create_quad_domain(MPI.COMM_WORLD, nx, nz, P0, P1, P2, P3, celltype=mesh.CellType.quadrilateral)
-
-# Initialize functionspace, test function, coordinates
-Q = fem.functionspace(domain, ("DG", 0)) # material parameters
-V = fem.functionspace(domain, ("CG", 1)) # pressure head
-v = ufl.TestFunction(V)
-x = ufl.SpatialCoordinate(domain)
+delta_x = delta_z = 0.05
+nx = int(6/delta_x)
+nz = int(3/delta_x)
+print(f"Resolution is dx = {delta_x} m, dz = {delta_z} m, giving nx = {nx}, nz = {nz}")
 
 
-# -------------------------------------------------
-# DG0 parameter fields
-# -------------------------------------------------
-
-Ks      = fem.Function(Q)
-alpha   = fem.Function(Q)
-n_vg    = fem.Function(Q)
-theta_r = fem.Function(Q)
-theta_s = fem.Function(Q)
-
-# -------------------------------------------------
-# Material assignment
-# -------------------------------------------------
 
 # Define parameters for each layer (layer 1, top: sand, layer 2, bottom: silt)
 layer_params = {
@@ -48,157 +202,8 @@ layer_params = {
     3: {"name": "silt", "alpha": 1.6, "N": 1.37, "theta_r": 0.034, "theta_s": 0.46, "Ks": 6.94e-7, "locator": lambda x: x[1] < slope*x[0] + P3[1]/2 - 1e-14},
 }
 
-tdim = domain.topology.dim
-num_cells = domain.topology.index_map(tdim).size_local
-cells = np.arange(num_cells, dtype=np.int32)
-
-midpoints = mesh.compute_midpoints(domain, tdim, cells)
-
-Ks_vals      = np.zeros(num_cells)
-alpha_vals   = np.zeros(num_cells)
-n_vals       = np.zeros(num_cells)
-theta_r_vals = np.zeros(num_cells)
-theta_s_vals = np.zeros(num_cells)
-
-for c, x in enumerate(midpoints):
-    # Check in which layer the midpoint is and assign the corresponding parameters
-    for key, value in layer_params.items():
-        if value["locator"](x):
-            Ks_vals[c] = value["Ks"]
-            alpha_vals[c] = value["alpha"]
-            n_vals[c] = value["N"]
-            theta_r_vals[c] = value["theta_r"]
-            theta_s_vals[c] = value["theta_s"]
-
-# -------------------------------------------------
-# Store into DG0 functions
-# -------------------------------------------------
-
-Ks.x.array[:] = Ks_vals
-alpha.x.array[:] = alpha_vals
-n_vg.x.array[:] = n_vals
-theta_r.x.array[:] = theta_r_vals
-theta_s.x.array[:] = theta_s_vals
-
-Ks.x.scatter_forward()
-alpha.x.scatter_forward()
-n_vg.x.scatter_forward()
-theta_r.x.scatter_forward()
-theta_s.x.scatter_forward()
-
-# -------------------------------------------------
-# Define parametrizations
-# -------------------------------------------------
-
-# van Genuchten
-def S_e(h_w, alpha, N):
-    return ufl.conditional(h_w < 0, (1 + (- alpha * h_w)**N)**((1 - N) / N), 1)
-def theta(Se, theta_r, theta_s):
-    return theta_r + (theta_s - theta_r)*Se
-def k_rel(Se, N):
-    m = 1 - 1/N
-    return ufl.conditional(Se < 1 - 1e-7, ufl.sqrt(Se) * (1 - (1 - Se**(1/m))**m)**2 , 1)
-
-# Boundary condition locators
-def on_dirichlet(x):
-    return np.logical_and(np.isclose(x[0], P1[0]), x[1] <= 0)
-
-def top(x):
-    return np.isclose(x[1], slope*x[0]+P3[1])
-
-# Dirichlet boundary
-def dirichlet(x):
-    return -x[1]
-dofs_D = fem.locate_dofs_geometrical(V, on_dirichlet)
-u_D = fem.Function(V)
-u_D.interpolate(dirichlet)
-bc = fem.dirichletbc(u_D, dofs_D)
-
-# Inflow (Neumann) boundary
-tdim = domain.topology.dim
-fdim = tdim - 1
-domain.topology.create_connectivity(fdim, tdim)
-boundary_facets = mesh.exterior_facet_indices(domain.topology) 
-facets_on_top = mesh.locate_entities(domain, fdim, top)
-facets_not_top = np.setdiff1d(boundary_facets, facets_on_top)
-# Mark facets belonging to inflow boundary with 1
-facet_markers = np.zeros_like(boundary_facets)
-facet_markers[:len(facets_on_top)] = 1
-facet_indices = np.hstack([facets_on_top, facets_not_top])
-sorted_facets = np.argsort(facet_indices)
-# Create meshtags for facets (marker = 1 for inflow boundary)
-facet_tags = mesh.meshtags(domain, fdim, facet_indices[sorted_facets], facet_markers[sorted_facets]) 
-# Create custom integration measure for inflow boundary
-ds = ufl.Measure("ds", domain, subdomain_data=facet_tags)
-# Recharge
-c_in = fem.Constant(domain, PETSc.ScalarType(2e-9))
-inflow = - v * c_in * ds(1)
-
-# Time discretization
-t = 0.0 # start time [s]
-T = 24*60*60 # end time [s]
-delta_t = 7 # time step [s]
-
-# Variational formulation
-h_w_old = fem.Function(V)
-h_w_old.name = "h_w_old"
-h_w_old.x.array[:] = -1e-2*np.ones_like(h_w_old.x.array) # initial condition close to saturation
-
-h_w_new = fem.Function(V)
-h_w_new.x.array[:] = h_w_old.x.array
-
-z = x[1]
-
-petsc_options = {
-    "snes_type": "newtonls",
-    "snes_linesearch_type": "none",
-    "snes_atol": 1e-10,
-    "snes_rtol": 1e-4,
-    "snes_monitor_cancel": None,
-    "snes_maxit": 20,
-    "ksp_error_if_not_converged": True,
-    "ksp_type": "gmres",
-    "ksp_rtol": 1e-4,
-    "ksp_monitor_cancel": None,
-    "pc_type": "hypre",
-    "pc_hypre_type": "boomeramg",
-    "pc_hypre_boomeramg_max_iter": 1,
-    "pc_hypre_boomeramg_cycle_type": "v",
-}
-
-while t <= T:
-    t += delta_t
-
-    # Initial guess for Newton
-    h_w_new.x.array[:] = h_w_old.x.array
-
-    # Weak formulation
-    F = (theta(S_e(h_w_new, alpha, n_vg), theta_r, theta_s) - theta(S_e(h_w_old, alpha, n_vg), theta_r, theta_s)) / delta_t * v * ufl.dx
-    F += ufl.dot(ufl.grad(v), Ks * k_rel(S_e(h_w_new, alpha, n_vg), n_vg) * ufl.grad(z + h_w_new)) * ufl.dx
-    F += inflow
-    problem = NonlinearProblem(
-        F,
-        h_w_new,
-        bcs=[bc],
-        petsc_options=petsc_options,
-        petsc_options_prefix="richards",
-    )
-    h_w_new = problem.solve()
-    converged = problem.solver.getConvergedReason()
-    num_iter = problem.solver.getIterationNumber()
-    assert converged > 0, f"Solver did not converge, got {converged}."
-    print(
-        f"Solver converged after {num_iter} iterations with converged reason {converged}. Time step is {delta_t} s at t={(t-delta_t)/3600:.2f} hours."
-    )
-
-    # adaptive time stepping:
-    if num_iter > 10 and delta_t > 1e-1:
-        t += - delta_t
-        delta_t *= 0.5
-        h_w_new.x.array[:] = h_w_old.x.array
-    if num_iter < 3:
-        delta_t *= 1.2
-
-    # update old solution
-    h_w_old.x.array[:] = h_w_new.x.array
-    
+T = 15*24*60*60
+t0 = time.time()
+h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True)
+elapsed = time.time() - t0
+print(f"Time needed for execution: {elapsed:.2f} s.")
