@@ -159,7 +159,7 @@ def eval_fct_on_grid(grid, u, domain):
     h = np.array(values).flatten()
     return h
 
-def get_grid(P0, P1, P2, P3, n=20):
+def get_grid(P0, P1, P2, P3, nx, nz):
     """
     Generate a grid of points made up of four corner points.
 
@@ -168,15 +168,16 @@ def get_grid(P0, P1, P2, P3, n=20):
         P1 (np.array): x and y coordinates of the bottom-right corner point
         P2 (np.array): x and y coordinates of the top-right corner point
         P3 (np.array): x and y coordinates of the top-left corner point
-        n (int, optional): number of points in x- and z-direction. Defaults to 20.
+        nx (int): number of points in x-direction.
+        nz (int): number of points in z-direction.
 
     Returns:
-        np.ndarray: list of 2D points of the grid, size (n*n, 2)
-        np.ndarray: grid of x-coordinates, size (n, n)
-        np.ndarray: grid of z-coordinates, size (n, n)
+        np.ndarray: list of 2D points of the grid, size (nx*nz, 2)
+        np.ndarray: plotting points for x-coordinates, size (nx, nz)
+        np.ndarray: plotting points for z-coordinates, size (nx, nz)
     """
-    x_int = np.linspace(0, 1, n)
-    z_int = np.linspace(0, 1, n)
+    x_int = np.linspace(0, 1, nx)
+    z_int = np.linspace(0, 1, nz)
     x_int, z_int = np.meshgrid(x_int, z_int)
 
     # Bilinear interpolation
@@ -185,7 +186,13 @@ def get_grid(P0, P1, P2, P3, n=20):
 
     # Combine into a grid of points
     grid = np.column_stack((x_grid.ravel(), z_grid.ravel()))
-    x_grid = x_grid.reshape((n,n))
-    z_grid = z_grid.reshape((n,n))
 
-    return grid, x_grid, z_grid
+    # Generate plotting points
+    x_int = np.linspace(0, 1, nx+1)
+    z_int = np.linspace(0, 1, nz+1)
+    x_int, z_int = np.meshgrid(x_int, z_int)
+    # Bilinear interpolation
+    x_plot = (1 - x_int) * (1 - z_int) * P0[0] + x_int * (1 - z_int) * P1[0] + x_int * z_int * P2[0] + (1 - x_int) * z_int * P3[0]
+    z_plot = (1 - x_int) * (1 - z_int) * P0[1] + x_int * (1 - z_int) * P1[1] + x_int * z_int * P2[1] + (1 - x_int) * z_int * P3[1]
+
+    return grid, x_plot, z_plot

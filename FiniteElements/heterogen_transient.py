@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from mpi4py import MPI
-from dolfinx import mesh, fem, default_scalar_type
-from dolfinx.fem.petsc import NonlinearProblem
+from dolfinx import mesh, fem
 import ufl
 from petsc4py import PETSc
 from my_functions import *
@@ -51,7 +49,7 @@ def boundary_conditions(V, domain, v, P0, P1, P2, P3):
 
     return bc, inflow
 
-def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save_tmp=False):
+def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save_tmp=False, filename=None):
     from dolfinx.fem.petsc import create_matrix, create_vector
 
     # Create FE framework
@@ -105,10 +103,15 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
             "nx": nx,
             "nz": nz,
             "T_end": T,
+            "alpha": alpha.x.array,
+            "N": N.x.array,
+            "Ks": Ks.x.array,
+            "theta_r": theta_r.x.array,
+            "theta_s": theta_s.x.array,
             "h_w": [],
             "times": []
             }
-        next_saving_time = 1
+        next_saving_time = 3600
         tmp["h_w"].append(h_w_old.x.array)
         tmp["times"].append(t)
 
@@ -144,19 +147,18 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
         
         # adaptive time stepping:
         if num_iter > 10 and float(delta_t.value) > 1e-1:
-            delta_t.value *= 0.5
+            delta_t.value = max(0.5*float(delta_t.value), 1e-1)
             continue
         if num_iter < 3 and float(delta_t.value) < 3600:
-            delta_t.value *= 1.2
+            delta_t.value = min(float(delta_t.value)*1.2, 3600)
         assert converged > 0, f"Solver did not converge, got {converged}."
         print(
             f"Solver converged after {num_iter} iterations with converged reason {converged}. Time step is {delta_t.value:.2f} s at t={t/3600:.2f} hours."
         )
 
         # save temporary data
-        current_hour = int(t/3600)
-        if save_tmp and current_hour >= next_saving_time:
-            next_saving_time = current_hour + 1
+        if save_tmp and t >= next_saving_time:
+            next_saving_time += 3600
             tmp["h_w"].append(h_w_new.x.array.copy())
             tmp["times"].append(t)
 
@@ -171,8 +173,9 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
         tmp["times"].append(t)
     # dump temporary data into pickle file
     if save_tmp:
-        file_name = "./solutions/heterogeneous_" + str(int(T/3600)) + "h_nx" + str(nx) + "_nz" + str(nz) + ".pkl"
-        with open(file_name, "wb") as f:
+        if not filename: # set default filename
+            filename = "./solutions/heterogeneous_" + str(int(T/3600)) + "h_nx" + str(nx) + "_nz" + str(nz) + ".pkl"
+        with open(filename, "wb") as f:
             pickle.dump(tmp, f)
     snes.destroy()
     b.destroy()
@@ -202,8 +205,8 @@ layer_params = {
     3: {"name": "silt", "alpha": 1.6, "N": 1.37, "theta_r": 0.034, "theta_s": 0.46, "Ks": 6.94e-7, "locator": lambda x: x[1] < slope*x[0] + P3[1]/2 - 1e-14},
 }
 
-T = 15*24*60*60
+T = 30*24*60*60
 t0 = time.time()
-h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True)
+h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True, filename="./solutions/sand_over_silt_720h_5cm.pkl")
 elapsed = time.time() - t0
 print(f"Time needed for execution: {elapsed:.2f} s.")

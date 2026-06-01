@@ -170,3 +170,12 @@ hab nochmal am transienten Fall gearbeitet und versucht, den schneller hinzubeko
 
 28.05.2026 12:30 - 15:00 Uhr
 Heterogenen Fall gemacht. Es dauert gar nicht so lange, juhu! 15 Tage mit Auflösung von 5 cm dauert ungefähr 11 Minuten, also machbar. Außerdem sieht es sehr ähnlich zu Annes Lösung aus. h_tot sieht bei der Anne ein bisschen anders aus, aber ich glaube, eventuell berechne ich das noch nicht ganz richtig, muss ich nochmal schauen. Am besten wär es halt, das direkt im time-loop zu berechnen, da muss ich aber nochmal überlegen, wie genau das geht. Außerdem stimmt das mit den Zwischenergebnissen noch nicht ganz, es speichert zu wenige, also nicht für jede Stunde eins, da bin ich bis jetzt noch nicht dahinter gekommen, weshalb. Für morgen will ich noch schauen, dass ich die Auswertung auch auf einem grid der Größe nx * nz hinbekomme, das klappt irgendwie noch nicht ganz so wie ich mir das vorstelle. Aber sonst bin ich erstmal ganz zufrieden. Achso und ich hab erst nur Sand über Schluff getestet und noch nicht andersrum.
+
+29.05.2026 10:00 - 14:00 Uhr
+Zwischenergebnisse werden jetzt stündlich gespeichert und ich kann die Auswertung auf der Original-Auflösung durchführen. Mehrere Beispiele laufen lassen. Sand über Schluff, Schluff über Sand funktioniert beides mit Anfangsbedingung -0.01 m in ca 15 Minuten Laufzeit. 
+To dos: Page 1 Figure erstellen, im report alles auf h_w (pressure head) umstellen, Poster anfangen, Code aufräumen
+
+01.06.2026 08:50 - Uhr
+Besprechung mit Anne: Ergebnisse sehen gut aus, dann kann ich jetzt mit dem Schnee anfangen. Upstream weighting macht erstmal nicht so mega viel Sinn, weil der Fluss glaub in den Elementen und nicht über die Grenze berechnet wird. Außerdem konvergiert es ja im heterogenen Fall auch ohne averaging. Als nächstes räum ich die Gleichungen auf, damit alles ordentlich auf h_w läuft und dann soll ich die schwache Form herleiten, vielleicht auch einmal ausführlich für die Richards Gleichung. Danach schau ich nach Kopplungsmethoden für finite Elemente (z.B. predictor - corrector).
+-> Ne, ich muss zuerst nach splitting schemes schauen und dann dafür die schwache Form herleiten, weil ja je nach Schema manche Variablen noch alt sind und deswegen nicht mit der Testfunktion multipliziert werden müssen.
+Hab jetzt erstmal im Report alles umgeschrieben auf h_w und noch die schwache Form der transienten Richards Gleichung hergeleitet. Morgen muss ich mich dann mit den splitting schemes für finite Elemente beschäftigen, was es da so gibt.
