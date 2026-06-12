@@ -173,7 +173,7 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
         tmp["times"].append(t)
     # dump temporary data into pickle file
     if save_tmp:
-        if not filename: # set default filename
+        if filename is None: # set default filename
             filename = "./solutions/heterogeneous_" + str(int(T/3600)) + "h_nx" + str(nx) + "_nz" + str(nz) + ".pkl"
         with open(filename, "wb") as f:
             pickle.dump(tmp, f)
