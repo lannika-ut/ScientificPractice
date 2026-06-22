@@ -81,7 +81,7 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
     # Variational formulation
     h_w_old = fem.Function(V)
     h_w_old.name = "h_w_old"
-    h_w_old.x.array[:] = -1e-2*np.ones_like(h_w_old.x.array) # initial condition close to saturation
+    h_w_old.x.array[:] = -0.3*np.ones_like(h_w_old.x.array) # initial condition close to saturation
 
     h_w_new = fem.Function(V)
 
@@ -146,7 +146,7 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
         num_iter = snes.getIterationNumber()
         
         # adaptive time stepping:
-        if num_iter > 10 and float(delta_t.value) > 1e-1:
+        if num_iter > 10 and float(delta_t.value) > 1e-2:
             delta_t.value = max(0.5*float(delta_t.value), 1e-1)
             continue
         if num_iter < 3 and float(delta_t.value) < 3600:
@@ -204,9 +204,10 @@ layer_params = {
     2: {"name": "sand", "alpha": 14.5, "N": 2.68, "theta_r": 0.045, "theta_s": 0.43, "Ks": 8.25e-5, "locator": lambda x: x[1] >= slope*x[0] + P3[1]/2 - 1e-14},
     3: {"name": "silt", "alpha": 1.6, "N": 1.37, "theta_r": 0.034, "theta_s": 0.46, "Ks": 6.94e-7, "locator": lambda x: x[1] < slope*x[0] + P3[1]/2 - 1e-14},
 }
+layer_params = {1: {"name": "snow", "alpha": 4.99, "N": 14.56, "theta_r": 0.02, "theta_s": 0.9*0.468, "Ks": 6.859e-04, "locator": lambda x: True}}
 
-T = 30*24*60*60
+T = 24*60*60
 t0 = time.time()
-h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True, filename="./solutions/sand_over_silt_720h_5cm.pkl")
+h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True, filename="./solutions/test_homogeneous_snow.pkl")
 elapsed = time.time() - t0
 print(f"Time needed for execution: {elapsed:.2f} s.")
