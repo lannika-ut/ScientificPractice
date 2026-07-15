@@ -210,7 +210,7 @@ layer_params = {
     2: {"name": "sand", "alpha": 14.5, "N": 2.68, "theta_r": 0.045, "theta_s": 0.43, "Ks": 8.25e-5, "locator": lambda x: x[1] >= slope*x[0] + P3[1]/2 - 1e-14},
     3: {"name": "silt", "alpha": 1.6, "N": 1.37, "theta_r": 0.034, "theta_s": 0.46, "Ks": 6.94e-7, "locator": lambda x: x[1] < slope*x[0] + P3[1]/2 - 1e-14},
 }
-layer_params = {1: {"name": "snow", "alpha": 4.99, "N": 14.56, "theta_r": 0.02, "theta_s": 0.9*0.468, "Ks": 6.859e-04, "locator": lambda x: True}}
+layer_params = {1: {"name": "snow", "alpha": 32, "N": 5, "theta_r": 0.02, "theta_s": 0.9*0.468, "Ks": 0.03048, "locator": lambda x: True}}
 
 T = 4*60*60
 t0 = time.time()
