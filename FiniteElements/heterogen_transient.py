@@ -27,6 +27,12 @@ def boundary_conditions(V, domain, v, P0, P1, P2, P3):
     u_D.interpolate(dirichlet)
     bc = fem.dirichletbc(u_D, dofs_D)
 
+    # Test constant head on top
+    dofs_D_top = fem.locate_dofs_geometrical(V, top)
+    u_D_top = fem.Function(V)
+    u_D_top.x.array[:] = 0.1
+    bc_top = fem.dirichletbc(u_D_top, dofs_D_top)
+
     # Inflow (Neumann) boundary
     tdim = domain.topology.dim
     fdim = tdim - 1
@@ -47,7 +53,7 @@ def boundary_conditions(V, domain, v, P0, P1, P2, P3):
     c_in = fem.Constant(domain, PETSc.ScalarType(2e-9))
     inflow = - v * c_in * ds(1)
 
-    return bc, inflow
+    return bc, bc_top
 
 def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save_tmp=False, filename=None):
     from dolfinx.fem.petsc import create_matrix, create_vector
@@ -71,7 +77,7 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
     theta_s = param_fct["theta_s"]
 
     # Get boundary conditions
-    bc, inflow = boundary_conditions(V, domain, v, P0, P1, P2, P3)
+    bc, bc_top = boundary_conditions(V, domain, v, P0, P1, P2, P3)
 
     t = 0.0 # start time [s]
     
@@ -81,7 +87,7 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
     # Variational formulation
     h_w_old = fem.Function(V)
     h_w_old.name = "h_w_old"
-    h_w_old.x.array[:] = -0.3*np.ones_like(h_w_old.x.array) # initial condition close to saturation
+    h_w_old.x.array[:] = -0.17*np.ones_like(h_w_old.x.array) # initial condition close to saturation
 
     h_w_new = fem.Function(V)
 
@@ -90,10 +96,10 @@ def solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, delta_t = 7, save
     # Weak formulation
     F = (theta(S_e(h_w_new, alpha, N), theta_r, theta_s) - theta(S_e(h_w_old, alpha, N), theta_r, theta_s)) / delta_t * v * ufl.dx
     F += ufl.dot(ufl.grad(v), Ks * k_rel(S_e(h_w_new, alpha, N), N) * ufl.grad(z + h_w_new)) * ufl.dx
-    F += inflow
+    #F += inflow
 
     # Create nonlinear problem
-    problem = NonlinearPDE_SNESProblem(F, h_w_new, bc)
+    problem = NonlinearPDE_SNESProblem(F, h_w_new, [bc_top, bc])
     b = create_vector(V)
     J = create_matrix(problem.a)
 
@@ -191,7 +197,7 @@ P1 = np.array([6, -1])
 P2 = np.array([6, 2])
 P3 = np.array([0, 3])
 slope = (P1[1]-P0[1])/(P1[0]-P0[0])
-delta_x = delta_z = 0.05
+delta_x = delta_z = 0.1
 nx = int(6/delta_x)
 nz = int(3/delta_x)
 print(f"Resolution is dx = {delta_x} m, dz = {delta_z} m, giving nx = {nx}, nz = {nz}")
@@ -206,8 +212,8 @@ layer_params = {
 }
 layer_params = {1: {"name": "snow", "alpha": 4.99, "N": 14.56, "theta_r": 0.02, "theta_s": 0.9*0.468, "Ks": 6.859e-04, "locator": lambda x: True}}
 
-T = 24*60*60
+T = 4*60*60
 t0 = time.time()
-h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True, filename="./solutions/test_homogeneous_snow.pkl")
+h_w = solve_with_Newton(nx, nz, P0, P1, P2, P3, T, layer_params, save_tmp=True, filename="./Masterarbeit/solutions/iso_test_Dirichlet.pkl")
 elapsed = time.time() - t0
 print(f"Time needed for execution: {elapsed:.2f} s.")
